@@ -1,6 +1,0 @@
-{
-  "name": "ERP Bimbel Privat",
-  "description": "Enterprise Resource Planning terpadu untuk Bimbingan Belajar Privat dengan manajemen siswa, tentor, jadwal, absensi selfie, keuangan, approval workflow, dan rekapitulasi laporan.",
-  "requestFramePermissions": ["camera"],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
-}
