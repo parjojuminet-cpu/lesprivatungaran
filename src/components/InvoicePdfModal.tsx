@@ -6,6 +6,13 @@ import {
   Calendar, Award, BookOpen, User, Building2, Wallet, Share2, Users
 } from 'lucide-react';
 
+// @ts-ignore
+import invoiceLogo from '../assets/images/invoice_logo_1783502513743.jpg';
+// @ts-ignore
+import invoiceStamp from '../assets/images/invoice_stamp_1783502530856.jpg';
+// @ts-ignore
+import invoiceSosmed from '../assets/images/invoice_sosmed_1783502546137.jpg';
+
 interface InvoicePdfModalProps {
   invoice: Invoice;
   student?: Student;
@@ -89,7 +96,7 @@ export const InvoicePdfModal: React.FC<InvoicePdfModalProps> = ({
       ? `\n• Biaya/Cas Tambahan: *${formatRupiah(additionalAmount)}* - ${additionalNotes || 'Perlengkapan/Denda'}${addTutorSuffix}`
       : '';
 
-    const message = `Yth. Bapak/Ibu *${student.parentName}* (Orang Tua dari *${student.name}*),\n\nSalam hangat dari Management *Bimbel Privat Academia*.\n\nBerikut kami lampirkan *Nota Penagihan SPP & Rincian Presensi Tentor* an. *${student.name}* (${student.grade} - ${student.school}) per tanggal ${dateNow}:\n\n🧾 *DETAIL NOTA TAGIHAN SPP*\n• No. Invoice: *${invoice.invoiceNumber}*\n• Total Sesi Terpakai: *${sessionCount} Sesi*\n\n👥 *RINCIAN SESI PER TENTOR PENGAJAR*:\n${tutorBreakdownLines}${additionalText}\n\n• *Total Tagihan Akhir*: *${formatRupiah(totalAmount)}*\n• Jumlah Terbayar: *${formatRupiah(invoice.amountPaid)}*\n• Sisa Kekurangan: *${formatRupiah(remaining)}*\n• Status Pembayaran: *${invoice.status.toUpperCase()}*\n• Jatuh Tempo: *${invoice.dueDate}*\n\n📚 *RINCIAN ABSENSI & JADWAL PENGAJARAN TENOR*\n${recentMaterials || '  (Siswa mengikuti seluruh sesi dengan sangat antusias)'}\n\n💳 *REKENING PEMBAYARAN RESMI*\n• BCA: *1234-5678-90* a.n Bimbel Privat Academia\n• Mandiri: *9876-5432-10* a.n Bimbel Privat Academia\n\n📄 *Dokumen Nota Penagihan & Rapor PDF lengkap* dapat diunduh/dicetak dari sistem atau diminta ke Admin.\n\nMohon konfirmasi jika pembayaran telah dilakukan. Terima kasih atas kepercayaan Bapak/Ibu! 🙏✨`;
+    const message = `Yth. Bapak/Ibu *${student.parentName}* (Orang Tua dari *${student.name}*),\n\nSalam hangat dari Management *Les Privat Ungaran*.\n\nBerikut kami lampirkan *Nota Penagihan SPP & Rincian Presensi Tentor* an. *${student.name}* (${student.grade} - ${student.school}) per tanggal ${dateNow}:\n\n🧾 *DETAIL NOTA TAGIHAN SPP*\n• No. Invoice: *${invoice.invoiceNumber}*\n• Total Sesi Terpakai: *${sessionCount} Sesi*\n\n👥 *RINCIAN SESI PER TENTOR PENGAJAR*:\n${tutorBreakdownLines}${additionalText}\n\n• *Total Tagihan Akhir*: *${formatRupiah(totalAmount)}*\n• Jumlah Terbayar: *${formatRupiah(invoice.amountPaid)}*\n• Sisa Kekurangan: *${formatRupiah(remaining)}*\n• Status Pembayaran: *${invoice.status.toUpperCase()}*\n• Jatuh Tempo: *${invoice.dueDate}*\n\n📚 *RINCIAN ABSENSI & JADWAL PENGAJARAN TENOR*\n${recentMaterials || '  (Siswa mengikuti seluruh sesi dengan sangat antusias)'}\n\n💳 *REKENING PEMBAYARAN RESMI*\n• BNI: *1794373083* a.n DESTI AYU RAHMAWATI\n• BRI: *609501001575508* a.n DESTI AYU RAHMAWATI\n\n📄 *Dokumen Nota Penagihan & Rapor PDF lengkap* dapat diunduh/dicetak dari sistem atau diminta ke Admin.\n\nMohon konfirmasi jika pembayaran telah dilakukan. Terima kasih atas kepercayaan Bapak/Ibu! 🙏✨`;
 
     const encodedText = encodeURIComponent(message);
     const waUrl = `https://wa.me/${student.parentWA}?text=${encodedText}`;
@@ -169,18 +176,21 @@ export const InvoicePdfModal: React.FC<InvoicePdfModalProps> = ({
           {/* 1. KOP SURAT BIMBEL */}
           <div className="border-b-2 border-slate-900 pb-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-xl bg-slate-900 text-white flex items-center justify-center font-black text-xl tracking-wider">
-                BPA
-              </div>
+              <img
+                src={invoiceLogo}
+                alt="Les Privat Ungaran Logo"
+                className="w-16 h-16 object-contain rounded-lg"
+                referrerPolicy="no-referrer"
+              />
               <div>
                 <h1 className="text-xl font-black tracking-tight text-slate-900 uppercase">
-                  BIMBEL PRIVAT ACADEMIA
+                  LES PRIVAT UNGARAN
                 </h1>
                 <p className="text-xs text-slate-600 font-medium">
                   Lembaga Bimbingan Belajar & Privat Profesional
                 </p>
                 <p className="text-[11px] text-slate-500">
-                  Jl. Pendidikan No. 88, Kota Malang • Hotline WA: 0812-3456-7890 • email: admin@bimbelacademia.com
+                  Semarang - Ungaran • Hotline WA: 0857-2770-7500 • Instagram: @lesprivat_ungaran
                 </p>
               </div>
             </div>
@@ -396,32 +406,45 @@ export const InvoicePdfModal: React.FC<InvoicePdfModalProps> = ({
           {/* 5. METODE PEMBAYARAN & REKENING RESMI */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs pt-2">
             <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-1">
-              <div className="font-bold text-slate-900 mb-1">💳 Rekening Pembayaran Resmi Bimbel:</div>
-              <div className="font-mono text-[11px]">
-                <div>• <strong>Bank BCA:</strong> 1234-5678-90 (a.n Bimbel Privat Academia)</div>
-                <div>• <strong>Bank Mandiri:</strong> 9876-5432-10 (a.n Bimbel Privat Academia)</div>
-                <div>• <strong>QRIS / E-Wallet:</strong> DANA / OVO (0812-3456-7890)</div>
+              <div className="font-bold text-slate-900 mb-1">💳 Rekening Pembayaran Resmi:</div>
+              <div className="font-mono text-[11px] space-y-1 text-slate-700">
+                <div>• <strong>BANK BNI:</strong> 1794373083 <span className="text-[10px] text-slate-500">(a.n DESTI AYU RAHMAWATI)</span></div>
+                <div>• <strong>BANK BRI:</strong> 609501001575508 <span className="text-[10px] text-slate-500">(a.n DESTI AYU RAHMAWATI)</span></div>
+                <div className="text-[10px] text-emerald-700 font-semibold mt-1">✓ Mohon kirimkan bukti transfer setelah melakukan pembayaran.</div>
               </div>
             </div>
 
             {/* Tanda Tangan & Stempel Digital */}
             <div className="flex justify-end items-center gap-6 pr-4">
-              <div className="text-center space-y-1">
-                <p className="text-[10px] text-slate-500">Malang, {new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
-                <p className="font-bold text-slate-900 text-xs">Management Bimbel Privat</p>
-                <div className="h-12 flex items-center justify-center my-1">
-                  <div className="border-2 border-indigo-800 text-indigo-800 font-black text-[10px] px-3 py-1 rounded-full uppercase tracking-widest rotate-[-5deg] opacity-80">
-                    ★ LUNAS / VERIFIED ★
-                  </div>
+              <div className="text-center space-y-1 relative">
+                <p className="text-[10px] text-slate-500">Ungaran, {new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+                <p className="font-bold text-slate-900 text-xs">Pimpinan Les Privat Ungaran</p>
+                <div className="h-20 flex items-center justify-center my-0.5">
+                  <img
+                    src={invoiceStamp}
+                    alt="Stempel & Tanda Tangan"
+                    className="w-24 h-24 object-contain mix-blend-multiply"
+                    referrerPolicy="no-referrer"
+                  />
                 </div>
-                <p className="font-extrabold text-slate-800 text-xs text-underline">Koordinator Akademik</p>
+                <p className="font-extrabold text-slate-800 text-xs underline decoration-slate-400">Desti Ayu Rahmawati</p>
               </div>
             </div>
           </div>
 
+          {/* Social Media Banner */}
+          <div className="flex justify-center items-center pt-2 border-t border-slate-100">
+            <img
+              src={invoiceSosmed}
+              alt="Social Media Les Privat"
+              className="h-14 object-contain"
+              referrerPolicy="no-referrer"
+            />
+          </div>
+
           {/* Footer Note */}
           <div className="border-t border-slate-200 pt-3 text-center text-[10px] text-slate-400 font-medium">
-            Dokumen ini diterbitkan secara otomatis oleh Sistem Management ERP Bimbel Privat Academia. Valid tanpa tanda tangan basah.
+            Dokumen ini diterbitkan secara otomatis oleh Sistem Management ERP Les Privat Ungaran. Valid tanpa tanda tangan basah.
           </div>
 
         </div>
