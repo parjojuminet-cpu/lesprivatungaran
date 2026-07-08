@@ -88,6 +88,13 @@ export function sanitizeErpDatabase(db: Partial<ErpDatabaseJson>): ErpDatabaseJs
     }
   }
 
+  let cleanModules = (db.modules || []).filter(m => !DUMMY_IDS.has(m.id));
+  for (const defaultMod of DEFAULT_JSON_MODULES) {
+    if (!cleanModules.some(m => m.id === defaultMod.id)) {
+      cleanModules.push(defaultMod);
+    }
+  }
+
   return {
     users,
     students: cleanStudents,
@@ -101,7 +108,7 @@ export function sanitizeErpDatabase(db: Partial<ErpDatabaseJson>): ErpDatabaseJs
     finance: (db.finance || []).filter(f => !DUMMY_IDS.has(f.id)),
     salaries: (db.salaries || []).filter(s => !DUMMY_IDS.has(s.id)),
     approvals: (db.approvals || []).filter(a => !DUMMY_IDS.has(a.id)),
-    modules: (db.modules || []).filter(m => !DUMMY_IDS.has(m.id)),
+    modules: cleanModules,
     settings: db.settings && db.settings.length > 0 ? db.settings : DEFAULT_JSON_SETTINGS,
     auditLogs: (db.auditLogs || []).filter(l => !DUMMY_IDS.has(l.id))
   };
