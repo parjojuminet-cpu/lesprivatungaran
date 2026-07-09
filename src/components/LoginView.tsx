@@ -223,8 +223,8 @@ export const LoginView: React.FC<LoginViewProps> = ({ users, onLoginSuccess }) =
               </div>
             </div>
 
-            <div className="bg-slate-900/60 p-2.5 rounded-2xl border border-slate-700/80 text-[11px] text-amber-300 font-semibold text-center">
-              💡 Penting: Selalu lakukan Absen tepat waktu di hari mengajar yang sama agar honor Anda terekap dengan benar!
+            <div className="bg-red-500/10 border border-red-500/30 p-3 rounded-2xl text-[11px] text-red-200 font-semibold leading-relaxed">
+              ⚠️ <strong className="text-amber-300">PENTING UNTUK REKAP GAJI:</strong> Jika Anda tidak melakukan absensi, sistem tidak dapat merekap sesi KBM tersebut sehingga <strong className="text-white underline">honor mengajar Anda TIDAK AKAN terekap</strong> dalam penggajian bulanan. Selalu lakukan absen harian di saat pembelajaran berlangsung agar otomatis terkonversi menjadi rekap gaji bulanan Anda dengan tepat waktu dan akurat!
             </div>
           </div>
         )}

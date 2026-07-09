@@ -554,6 +554,15 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               </div>
             </div>
             
+            <div className="bg-amber-500/10 border border-amber-500/30 p-3.5 rounded-xl text-xs text-amber-200 leading-relaxed space-y-1">
+              <span className="font-bold text-amber-300">⚠️ Peringatan Penting Rekap Gaji &amp; Kehadiran:</span>
+              <p className="text-slate-300 text-[11px]">
+                Setiap sesi mengajar <strong>wajib diabsensi harian langsung di saat kegiatan pembelajaran (KBM) berlangsung</strong>. 
+                Jika Anda lupa atau tidak melakukan absen, sistem tidak dapat mendeteksi sesi mengajar tersebut, sehingga honor harian Anda 
+                <strong> tidak akan terkonversi/terekap ke dalam penggajian bulanan</strong>.
+              </p>
+            </div>
+            
             <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-slate-950/60 p-3 rounded-xl border border-indigo-800/30 text-xs text-indigo-200">
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></div>
