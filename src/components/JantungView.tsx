@@ -553,17 +553,31 @@ export const JantungView: React.FC<JantungViewProps> = ({
   // Filter lists based on tab & search
   const q = searchQuery.toLowerCase().trim();
 
-  const filteredAttendances = attendances.filter(att => {
-    const student = students.find(s => s.id === att.studentId);
-    const tutor = tutors.find(t => t.id === att.tutorId);
-    const textMatch = !q ||
-      (student?.name || '').toLowerCase().includes(q) ||
-      (tutor?.name || '').toLowerCase().includes(q) ||
-      (att.materialCovered || '').toLowerCase().includes(q) ||
-      att.date.includes(q);
-    const typeMatch = filterType === 'Semua' || att.status === filterType;
-    return textMatch && typeMatch;
-  });
+  const filteredAttendances = attendances
+    .filter(att => {
+      const student = students.find(s => s.id === att.studentId);
+      const tutor = tutors.find(t => t.id === att.tutorId);
+      const textMatch = !q ||
+        (student?.name || '').toLowerCase().includes(q) ||
+        (tutor?.name || '').toLowerCase().includes(q) ||
+        (att.materialCovered || '').toLowerCase().includes(q) ||
+        att.date.includes(q);
+      const typeMatch = filterType === 'Semua' || att.status === filterType;
+      return textMatch && typeMatch;
+    })
+    .sort((a, b) => {
+      const dateA = new Date(a.date).getTime();
+      const dateB = new Date(b.date).getTime();
+      if (dateA !== dateB) {
+        return dateB - dateA;
+      }
+      const timeA = a.serverTime ? new Date(a.serverTime).getTime() : 0;
+      const timeB = b.serverTime ? new Date(b.serverTime).getTime() : 0;
+      if (timeA !== timeB) {
+        return timeB - timeA;
+      }
+      return b.id.localeCompare(a.id);
+    });
 
   const filteredFinance = finance.filter(fin => {
     const textMatch = !q ||

@@ -107,7 +107,23 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     ? attendances.filter(a => a.tutorId === currentUserTutorId)
     : attendances;
 
-  const recentAttendances = [...myAttendances].reverse().slice(0, 6);
+  const recentAttendances = [...myAttendances]
+    .sort((a, b) => {
+      // Sort by date descending (newest date first)
+      const dateA = new Date(a.date).getTime();
+      const dateB = new Date(b.date).getTime();
+      if (dateA !== dateB) {
+        return dateB - dateA;
+      }
+      // If dates are identical, sort by serverTime or id timestamp descending (newest submission first)
+      const timeA = a.serverTime ? new Date(a.serverTime).getTime() : 0;
+      const timeB = b.serverTime ? new Date(b.serverTime).getTime() : 0;
+      if (timeA !== timeB) {
+        return timeB - timeA;
+      }
+      return b.id.localeCompare(a.id);
+    })
+    .slice(0, 6);
 
   const expiringStudents = myStudents.filter(s => s.remainingSessions <= 2 && s.status === 'Aktif');
   const pendingApprovalsList = approvals.filter(a => a.status === 'Pending');

@@ -81,21 +81,35 @@ export const AttendanceView: React.FC<AttendanceViewProps> = ({
     ? attendances.filter(a => a.tutorId === currentUserTutorId)
     : attendances;
 
-  const filteredAttendances = rawDisplayAttendances.filter((att) => {
-    const student = students.find(s => s.id === att.studentId);
-    const tutor = tutors.find(t => t.id === att.tutorId);
+  const filteredAttendances = rawDisplayAttendances
+    .filter((att) => {
+      const student = students.find(s => s.id === att.studentId);
+      const tutor = tutors.find(t => t.id === att.tutorId);
 
-    const q = searchQuery.toLowerCase().trim();
-    const matchSearch = !q ||
-      (student?.name || '').toLowerCase().includes(q) ||
-      (tutor?.name || '').toLowerCase().includes(q) ||
-      (att.materialCovered || '').toLowerCase().includes(q) ||
-      (att.date || '').toLowerCase().includes(q);
+      const q = searchQuery.toLowerCase().trim();
+      const matchSearch = !q ||
+        (student?.name || '').toLowerCase().includes(q) ||
+        (tutor?.name || '').toLowerCase().includes(q) ||
+        (att.materialCovered || '').toLowerCase().includes(q) ||
+        (att.date || '').toLowerCase().includes(q);
 
-    const matchStatus = filterStatus === 'Semua' || att.status === filterStatus;
+      const matchStatus = filterStatus === 'Semua' || att.status === filterStatus;
 
-    return matchSearch && matchStatus;
-  });
+      return matchSearch && matchStatus;
+    })
+    .sort((a, b) => {
+      const dateA = new Date(a.date).getTime();
+      const dateB = new Date(b.date).getTime();
+      if (dateA !== dateB) {
+        return dateB - dateA;
+      }
+      const timeA = a.serverTime ? new Date(a.serverTime).getTime() : 0;
+      const timeB = b.serverTime ? new Date(b.serverTime).getTime() : 0;
+      if (timeA !== timeB) {
+        return timeB - timeA;
+      }
+      return b.id.localeCompare(a.id);
+    });
 
   const handleDeleteAttendance = async (attendanceId: string, studentName: string) => {
     if (window.confirm(`Apakah Anda yakin ingin MENGHAPUS data absensi ini untuk siswa "${studentName}"?\n\nTindakan ini akan mengembalikan kuota paket siswa (+1) dan membatalkan rekap keuangan/gaji terkait.`)) {
