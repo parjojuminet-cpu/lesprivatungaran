@@ -52,7 +52,19 @@ function handleFirestoreError(error: unknown, operationType: OperationType, path
   throw new Error(JSON.stringify(errInfo));
 }
 
-let isQuotaExceeded = false;
+const QUOTA_EXCEEDED_KEY = 'firestore_quota_exceeded_date';
+
+function checkIfQuotaExceededToday(): boolean {
+  try {
+    const savedDate = localStorage.getItem(QUOTA_EXCEEDED_KEY);
+    const today = new Date().toDateString();
+    return savedDate === today;
+  } catch {
+    return false;
+  }
+}
+
+let isQuotaExceeded = checkIfQuotaExceededToday();
 const quotaListeners = new Set<(exceeded: boolean) => void>();
 
 export function getQuotaExceeded(): boolean {
@@ -65,6 +77,16 @@ export function setQuotaExceededListener(callback: (exceeded: boolean) => void):
   return () => {
     quotaListeners.delete(callback);
   };
+}
+
+export function resetQuotaExceededStatus() {
+  try {
+    localStorage.removeItem(QUOTA_EXCEEDED_KEY);
+    isQuotaExceeded = false;
+    quotaListeners.forEach(cb => cb(false));
+  } catch (e) {
+    // ignore
+  }
 }
 
 function checkAndSetQuotaError(error: any) {
@@ -80,6 +102,11 @@ function checkAndSetQuotaError(error: any) {
     errMsg.includes('resource-exhausted') ||
     errMsg.includes('quota limit exceeded')
   ) {
+    try {
+      localStorage.setItem(QUOTA_EXCEEDED_KEY, new Date().toDateString());
+    } catch (e) {
+      // ignore
+    }
     if (!isQuotaExceeded) {
       isQuotaExceeded = true;
       quotaListeners.forEach(cb => cb(true));
@@ -178,6 +205,10 @@ export async function loadFromFirestore(): Promise<ErpDatabaseJson> {
 export function subscribeToFirestore(onDataUpdate: (data: ErpDatabaseJson) => void): () => void {
   const path = `${COLLECTION_NAME}/${DOC_ID}`;
   const docRef = doc(db, COLLECTION_NAME, DOC_ID);
+
+  if (isQuotaExceeded) {
+    return () => {};
+  }
 
   const unsubscribe = onSnapshot(
     docRef,

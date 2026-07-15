@@ -4,7 +4,7 @@ import {
   Attendance, Invoice, Finance, TutorSalary, Module, Approval,
   Setting, AuditLog, DashboardStats
 } from './types';
-import { LayoutDashboard, Camera, Calendar, Wallet, Menu, BookOpen, Database, AlertTriangle, ExternalLink } from 'lucide-react';
+import { LayoutDashboard, Camera, Calendar, Wallet, Menu, BookOpen, Database, AlertTriangle, ExternalLink, RefreshCw } from 'lucide-react';
 import { Header } from './components/Header';
 import { Sidebar, TabType } from './components/Sidebar';
 import { DashboardView } from './components/DashboardView';
@@ -31,7 +31,8 @@ import {
   loadFromFirestore,
   saveToFirestore,
   subscribeToFirestore,
-  setQuotaExceededListener
+  setQuotaExceededListener,
+  resetQuotaExceededStatus
 } from './services/firestoreService';
 
 export default function App() {
@@ -551,8 +552,18 @@ export default function App() {
                       </p>
                     )}
                   </div>
-                  {currentUser.role !== 'TENTOR' && (
-                    <div className="pt-1.5">
+                  <div className="pt-2 flex flex-wrap gap-2">
+                    <button
+                      onClick={() => {
+                        resetQuotaExceededStatus();
+                        window.location.reload();
+                      }}
+                      className="inline-flex items-center gap-1.5 bg-slate-800 hover:bg-slate-900 active:scale-95 text-white text-[11px] font-extrabold px-3 py-2 rounded-xl transition-all shadow-xs cursor-pointer border border-slate-700"
+                    >
+                      <RefreshCw className="w-3 h-3" />
+                      <span>Coba Hubungkan Kembali</span>
+                    </button>
+                    {currentUser.role !== 'TENTOR' && (
                       <a
                         href="https://console.firebase.google.com/project/yttriferous-bastion-ngtt6/firestore/databases/ai-studio-a6fd37f5-19c0-4f4c-bf76-ee92222d0fe4/data?openUpgradeDialog=true"
                         target="_blank"
@@ -562,8 +573,8 @@ export default function App() {
                         <ExternalLink className="w-3 h-3" />
                         <span>Buka Firebase Console & Upgrade Paket (Blaze)</span>
                       </a>
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
