@@ -30,6 +30,7 @@ const DEFAULT_SETTINGS: Setting[] = [
   { key: 'MAX_RESCHEDULE_PER_MONTH', value: 2, description: 'Batas Maksimal Reschedule Gratis Per Bulan', category: 'Operasional' },
   { key: 'MIN_NOTICE_RESCHEDULE_DAYS', value: 1, description: 'Minimal Pemberitahuan Reschedule Sebelum Hari Mengajar (Hari, misal 1 atau 2 hari)', category: 'Operasional' },
   { key: 'MAX_DEADLINE_RESCHEDULE_BEFORE_TEACHING_DAYS', value: 1, description: 'Batas Maksimal Pengajuan Reschedule Sebelum Hari Mengajar (Hari, Standar: H-1)', category: 'Operasional' },
+  { key: 'USE_FIRESTORE_DATABASE', value: false, description: 'Aktifkan sinkronisasi Cloud Firestore (Atur FALSE untuk menghemat kuota dan menggunakan database Express bawaan)', category: 'Integrasi' },
   { key: 'AUTO_SYNC_GOOGLE_SHEETS', value: true, description: 'Sinkronisasi Realtime Otomatis ke Google Sheets', category: 'Integrasi' }
 ];
 
@@ -378,6 +379,12 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                       ⚡ <strong>Fungsi Auto Sync:</strong> Saat diaktifkan (true), setiap perubahan data di ERP (Siswa, Presensi, SPP, Gaji) akan langsung tersinkronkan otomatis ke Google Spreadsheet Anda secara real-time.
                     </div>
                   )}
+
+                  {st.key === 'USE_FIRESTORE_DATABASE' && (
+                    <div className="bg-amber-50 text-amber-900 p-2.5 rounded-lg border border-amber-200 text-[11px] mt-2">
+                      💾 <strong>Pilihan Sumber Data Utama:</strong> Jika diatur ke <strong>NONAKTIF</strong> (Sangat direkomendasikan), sistem akan beralih menggunakan <strong>Express API Server bawaan</strong> sebagai pusat database. Ini menghindari masalah batasan kuota (Quota Exceeded) pada Firebase gratisan dan tidak memerlukan kartu kredit/Visa!
+                    </div>
+                  )}
                 </div>
 
                 <div className="pt-3 border-t border-slate-200">
@@ -387,8 +394,17 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                       onChange={(e) => handleChangeValue(st.key, e.target.value === 'true')}
                       className="w-full bg-white border border-slate-300 rounded-xl p-2.5 font-bold text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                     >
-                      <option value="true">AKTIF (True - Otomatis Sync Realtime)</option>
-                      <option value="false">NONAKTIF (False - Manual Sync Saja)</option>
+                      {st.key === 'USE_FIRESTORE_DATABASE' ? (
+                        <>
+                          <option value="false">NONAKTIF (False - Gunakan database Express Server bawaan - BEBAS KUOTA)</option>
+                          <option value="true">AKTIF (True - Gunakan database Cloud Firestore)</option>
+                        </>
+                      ) : (
+                        <>
+                          <option value="true">AKTIF (True - Otomatis Sync Realtime)</option>
+                          <option value="false">NONAKTIF (False - Manual Sync Saja)</option>
+                        </>
+                      )}
                     </select>
                   ) : (
                     <div className="relative">

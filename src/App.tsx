@@ -202,10 +202,147 @@ export default function App() {
 
   // Fetch all database state
   const loadAllData = async () => {
-    // 1. First load from Cloud Firestore as primary source of truth
+    // 1. Determine if Firestore is enabled in settings
+    const currentDb = loadErpJsonDatabase();
+    const firestoreSetting = currentDb.settings?.find(s => s.key === 'USE_FIRESTORE_DATABASE');
+    const useFirestore = firestoreSetting ? (firestoreSetting.value === true) : false;
+
+    // 2. Always fetch from Express Server first as the primary database
     try {
-      const rawCloudDb = await loadFromFirestore();
-      if (rawCloudDb && !getQuotaExceeded()) {
+      console.log('Fetching database from Express server /api/db as primary source of truth...');
+      const response = await fetch('/api/db');
+      if (response.ok) {
+        const serverDb = await response.json();
+        if (serverDb && serverDb.students) {
+          const sanitized = sanitizeErpDatabase(serverDb);
+          if (sanitized.students) setStudents(sanitized.students);
+          if (sanitized.tutors) setTutors(sanitized.tutors);
+          if (sanitized.parents) setParents(sanitized.parents);
+          if (sanitized.subjects) setSubjects(sanitized.subjects);
+          if (sanitized.workingAreas) setWorkingAreas(sanitized.workingAreas);
+          if (sanitized.schedules) setSchedules(sanitized.schedules);
+          if (sanitized.attendances) setAttendances(sanitized.attendances);
+          if (sanitized.invoices) setInvoices(sanitized.invoices);
+          if (sanitized.finance) setFinance(sanitized.finance);
+          if (sanitized.salaries) setSalaries(sanitized.salaries);
+          if (sanitized.approvals) setApprovals(sanitized.approvals);
+          if (sanitized.modules) setModules(sanitized.modules);
+          if (sanitized.settings) setSettings(sanitized.settings);
+          if (sanitized.auditLogs) setAuditLogs(sanitized.auditLogs);
+          if (sanitized.users) setUsers(sanitized.users);
+          saveErpJsonDatabase(sanitized);
+
+          // Sync to Firestore in the background if enabled
+          if (useFirestore && !getQuotaExceeded()) {
+            saveToFirestore(sanitized).catch(() => {});
+          }
+          
+          // Fetch additional stats in background
+          try {
+            const [resStats, resSheets] = await Promise.all([
+              safeFetch('/api/dashboard/stats', null),
+              safeFetch('/api/sheets/status', null)
+            ]);
+            if (resStats) setStats(resStats);
+            if (resSheets) setSyncStatus(resSheets);
+          } catch (err) {
+            console.warn('Backend API background sync notice:', err);
+          } finally {
+            setIsLoading(false);
+          }
+          return;
+        }
+      }
+    } catch (err) {
+      console.warn('Express server database unreachable, falling back to other sources:', err);
+    }
+
+    // 3. Fallback: load from Cloud Firestore if enabled
+    if (useFirestore) {
+      try {
+        console.log('Express server failed, falling back to Cloud Firestore...');
+        const rawCloudDb = await loadFromFirestore();
+        if (rawCloudDb && !getQuotaExceeded()) {
+          const cloudDb = sanitizeErpDatabase(rawCloudDb);
+          if (cloudDb.students) setStudents(cloudDb.students);
+          if (cloudDb.tutors) setTutors(cloudDb.tutors);
+          if (cloudDb.parents) setParents(cloudDb.parents);
+          if (cloudDb.subjects) setSubjects(cloudDb.subjects);
+          if (cloudDb.workingAreas) setWorkingAreas(cloudDb.workingAreas);
+          if (cloudDb.schedules) setSchedules(cloudDb.schedules);
+          if (cloudDb.attendances) setAttendances(cloudDb.attendances);
+          if (cloudDb.invoices) setInvoices(cloudDb.invoices);
+          if (cloudDb.finance) setFinance(cloudDb.finance);
+          if (cloudDb.salaries) setSalaries(cloudDb.salaries);
+          if (cloudDb.approvals) setApprovals(cloudDb.approvals);
+          if (cloudDb.modules) setModules(cloudDb.modules);
+          if (cloudDb.settings) setSettings(cloudDb.settings);
+          if (cloudDb.auditLogs) setAuditLogs(cloudDb.auditLogs);
+          if (cloudDb.users) setUsers(cloudDb.users);
+          saveErpJsonDatabase(cloudDb);
+
+          // Push to Express Server to keep backup updated
+          fetch('/api/db', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(cloudDb)
+          }).catch(() => {});
+          
+          setIsLoading(false);
+          return;
+        }
+      } catch (error) {
+        console.warn('Cloud Firestore load failed:', error);
+      }
+    }
+
+    // 4. Ultimate fallback: Use local JSON Storage from localStorage (already loaded in state initials)
+    console.log('Both Express Server and Firestore are unavailable, using offline local state.');
+    const localDb = loadErpJsonDatabase();
+    if (localDb.students) setStudents(localDb.students);
+    if (localDb.tutors) setTutors(localDb.tutors);
+    if (localDb.parents) setParents(localDb.parents);
+    if (localDb.subjects) setSubjects(localDb.subjects);
+    if (localDb.workingAreas) setWorkingAreas(localDb.workingAreas);
+    if (localDb.schedules) setSchedules(localDb.schedules);
+    if (localDb.attendances) setAttendances(localDb.attendances);
+    if (localDb.invoices) setInvoices(localDb.invoices);
+    if (localDb.finance) setFinance(localDb.finance);
+    if (localDb.salaries) setSalaries(localDb.salaries);
+    if (localDb.approvals) setApprovals(localDb.approvals);
+    if (localDb.modules) setModules(localDb.modules);
+    if (localDb.settings) setSettings(localDb.settings);
+    if (localDb.auditLogs) setAuditLogs(localDb.auditLogs);
+    if (localDb.users) setUsers(localDb.users);
+
+    // Fetch stats
+    try {
+      const [resStats, resSheets] = await Promise.all([
+        safeFetch('/api/dashboard/stats', null),
+        safeFetch('/api/sheets/status', null)
+      ]);
+      if (resStats) setStats(resStats);
+      if (resSheets) setSyncStatus(resSheets);
+    } catch (err) {
+      console.warn('Stats fetch failure on fallback:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    // 1. Subscribe to real-time sync across all devices (only processes updates if Firestore is enabled)
+    const unsubscribe = subscribeToFirestore((rawCloudDb) => {
+      // Check if Firestore sync is enabled in settings
+      const currentDb = loadErpJsonDatabase();
+      const firestoreSetting = currentDb.settings?.find(s => s.key === 'USE_FIRESTORE_DATABASE');
+      const useFirestore = firestoreSetting ? (firestoreSetting.value === true) : false;
+
+      if (!useFirestore) {
+        return;
+      }
+
+      if (rawCloudDb) {
         const cloudDb = sanitizeErpDatabase(rawCloudDb);
         if (cloudDb.students) setStudents(cloudDb.students);
         if (cloudDb.tutors) setTutors(cloudDb.tutors);
@@ -222,64 +359,11 @@ export default function App() {
         if (cloudDb.settings) setSettings(cloudDb.settings);
         if (cloudDb.auditLogs) setAuditLogs(cloudDb.auditLogs);
         if (cloudDb.users) setUsers(cloudDb.users);
-        saveErpJsonDatabase(cloudDb);
-
-        // Push to server to keep backup updated
-        fetch('/api/db', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(cloudDb)
-        }).catch(() => {});
-      } else {
-        // Firestore is empty, offline, or quota exceeded! Use Express server database as fallback
-        console.log('Firestore unavailable or quota exceeded, attempting to fetch from Express server...');
-        const response = await fetch('/api/db');
-        if (response.ok) {
-          const serverDb = await response.json();
-          if (serverDb && serverDb.students) {
-            const sanitized = sanitizeErpDatabase(serverDb);
-            if (sanitized.students) setStudents(sanitized.students);
-            if (sanitized.tutors) setTutors(sanitized.tutors);
-            if (sanitized.parents) setParents(sanitized.parents);
-            if (sanitized.subjects) setSubjects(sanitized.subjects);
-            if (sanitized.workingAreas) setWorkingAreas(sanitized.workingAreas);
-            if (sanitized.schedules) setSchedules(sanitized.schedules);
-            if (sanitized.attendances) setAttendances(sanitized.attendances);
-            if (sanitized.invoices) setInvoices(sanitized.invoices);
-            if (sanitized.finance) setFinance(sanitized.finance);
-            if (sanitized.salaries) setSalaries(sanitized.salaries);
-            if (sanitized.approvals) setApprovals(sanitized.approvals);
-            if (sanitized.modules) setModules(sanitized.modules);
-            if (sanitized.settings) setSettings(sanitized.settings);
-            if (sanitized.auditLogs) setAuditLogs(sanitized.auditLogs);
-            if (sanitized.users) setUsers(sanitized.users);
-            saveErpJsonDatabase(sanitized);
-            console.log('Loaded database successfully from Express server fallback.');
-            return;
-          }
-        }
-
-        // Final fallback to local JSON storage
-        const localDb = loadErpJsonDatabase();
-        if (localDb.students) setStudents(localDb.students);
-        if (localDb.tutors) setTutors(localDb.tutors);
-        if (localDb.parents) setParents(localDb.parents);
-        if (localDb.subjects) setSubjects(localDb.subjects);
-        if (localDb.workingAreas) setWorkingAreas(localDb.workingAreas);
-        if (localDb.schedules) setSchedules(localDb.schedules);
-        if (localDb.attendances) setAttendances(localDb.attendances);
-        if (localDb.invoices) setInvoices(localDb.invoices);
-        if (localDb.finance) setFinance(localDb.finance);
-        if (localDb.salaries) setSalaries(localDb.salaries);
-        if (localDb.approvals) setApprovals(localDb.approvals);
-        if (localDb.modules) setModules(localDb.modules);
-        if (localDb.settings) setSettings(localDb.settings);
-        if (localDb.auditLogs) setAuditLogs(localDb.auditLogs);
-        if (localDb.users) setUsers(localDb.users);
       }
-    } catch (e) {
-      console.warn('Firestore initial load error:', e);
-      // Try fetching from Express server
+    });
+
+    // 2. Poll Express Server /api/db to keep multiple tabs/devices synced in real time
+    const intervalId = setInterval(async () => {
       try {
         const response = await fetch('/api/db');
         if (response.ok) {
@@ -302,106 +386,12 @@ export default function App() {
             if (sanitized.auditLogs) setAuditLogs(sanitized.auditLogs);
             if (sanitized.users) setUsers(sanitized.users);
             saveErpJsonDatabase(sanitized);
-            console.log('Loaded database successfully from Express server fallback on error.');
-            return;
           }
         }
       } catch (err) {
-        console.warn('Express server fallback failed on error:', err);
+        console.warn('Express server background sync polling error:', err);
       }
-
-      // Final fallback to local storage
-      const localDb = loadErpJsonDatabase();
-      if (localDb.students) setStudents(localDb.students);
-      if (localDb.tutors) setTutors(localDb.tutors);
-      if (localDb.parents) setParents(localDb.parents);
-      if (localDb.subjects) setSubjects(localDb.subjects);
-      if (localDb.workingAreas) setWorkingAreas(localDb.workingAreas);
-      if (localDb.schedules) setSchedules(localDb.schedules);
-      if (localDb.attendances) setAttendances(localDb.attendances);
-      if (localDb.invoices) setInvoices(localDb.invoices);
-      if (localDb.finance) setFinance(localDb.finance);
-      if (localDb.salaries) setSalaries(localDb.salaries);
-      if (localDb.approvals) setApprovals(localDb.approvals);
-      if (localDb.modules) setModules(localDb.modules);
-      if (localDb.settings) setSettings(localDb.settings);
-      if (localDb.auditLogs) setAuditLogs(localDb.auditLogs);
-      if (localDb.users) setUsers(localDb.users);
-    }
-
-    // 2. Optionally fetch from backend API if custom server is active
-    try {
-      const [
-        resStats, resSheets
-      ] = await Promise.all([
-        safeFetch('/api/dashboard/stats', null),
-        safeFetch('/api/sheets/status', null)
-      ]);
-
-      if (resStats) setStats(resStats);
-      if (resSheets) setSyncStatus(resSheets);
-    } catch (err) {
-      console.warn('Backend API sync notice: running with Firestore / JSON Storage', err);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    // 1. Subscribe to real-time sync across all devices
-    const unsubscribe = subscribeToFirestore((rawCloudDb) => {
-      if (rawCloudDb) {
-        const cloudDb = sanitizeErpDatabase(rawCloudDb);
-        if (cloudDb.students) setStudents(cloudDb.students);
-        if (cloudDb.tutors) setTutors(cloudDb.tutors);
-        if (cloudDb.parents) setParents(cloudDb.parents);
-        if (cloudDb.subjects) setSubjects(cloudDb.subjects);
-        if (cloudDb.workingAreas) setWorkingAreas(cloudDb.workingAreas);
-        if (cloudDb.schedules) setSchedules(cloudDb.schedules);
-        if (cloudDb.attendances) setAttendances(cloudDb.attendances);
-        if (cloudDb.invoices) setInvoices(cloudDb.invoices);
-        if (cloudDb.finance) setFinance(cloudDb.finance);
-        if (cloudDb.salaries) setSalaries(cloudDb.salaries);
-        if (cloudDb.approvals) setApprovals(cloudDb.approvals);
-        if (cloudDb.modules) setModules(cloudDb.modules);
-        if (cloudDb.settings) setSettings(cloudDb.settings);
-        if (cloudDb.auditLogs) setAuditLogs(cloudDb.auditLogs);
-        if (cloudDb.users) setUsers(cloudDb.users);
-      }
-    });
-
-    // 2. Secondary fallback polling for when Firestore is offline or quota exceeded
-    const intervalId = setInterval(async () => {
-      if (getQuotaExceeded()) {
-        try {
-          const response = await fetch('/api/db');
-          if (response.ok) {
-            const serverDb = await response.json();
-            if (serverDb && serverDb.students) {
-              const sanitized = sanitizeErpDatabase(serverDb);
-              if (sanitized.students) setStudents(sanitized.students);
-              if (sanitized.tutors) setTutors(sanitized.tutors);
-              if (sanitized.parents) setParents(sanitized.parents);
-              if (sanitized.subjects) setSubjects(sanitized.subjects);
-              if (sanitized.workingAreas) setWorkingAreas(sanitized.workingAreas);
-              if (sanitized.schedules) setSchedules(sanitized.schedules);
-              if (sanitized.attendances) setAttendances(sanitized.attendances);
-              if (sanitized.invoices) setInvoices(sanitized.invoices);
-              if (sanitized.finance) setFinance(sanitized.finance);
-              if (sanitized.salaries) setSalaries(sanitized.salaries);
-              if (sanitized.approvals) setApprovals(sanitized.approvals);
-              if (sanitized.modules) setModules(sanitized.modules);
-              if (sanitized.settings) setSettings(sanitized.settings);
-              if (sanitized.auditLogs) setAuditLogs(sanitized.auditLogs);
-              if (sanitized.users) setUsers(sanitized.users);
-              saveErpJsonDatabase(sanitized);
-            }
-          }
-        } catch (err) {
-          console.warn('Express server fallback sync polling error:', err);
-        }
-      }
-    }, 10000); // Check and poll every 10 seconds if quota exceeded
+    }, 8000); // Poll Express server database every 8 seconds
 
     loadAllData();
 

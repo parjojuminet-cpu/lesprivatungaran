@@ -12,10 +12,18 @@ export async function persistDatabaseUpdate(updater: (db: ErpDatabaseJson) => Er
   const nextDb = updater(currentDb);
   saveErpJsonDatabase(nextDb);
   
-  // 1. Save to Cloud Firestore
-  saveToFirestore(nextDb).catch(err => {
-    console.warn('Background Firestore save status:', err);
-  });
+  // Check if Firestore sync is enabled in settings
+  const firestoreSetting = currentDb.settings?.find(s => s.key === 'USE_FIRESTORE_DATABASE');
+  const useFirestore = firestoreSetting ? (firestoreSetting.value === true) : false;
+
+  // 1. Save to Cloud Firestore only if explicitly enabled
+  if (useFirestore) {
+    saveToFirestore(nextDb).catch(err => {
+      console.warn('Background Firestore save status:', err);
+    });
+  } else {
+    console.log('Skipping Firestore save: USE_FIRESTORE_DATABASE is disabled');
+  }
 
   // 2. Dual-write backup to Express server
   fetch('/api/db', {

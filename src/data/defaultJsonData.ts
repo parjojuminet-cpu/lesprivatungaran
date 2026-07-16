@@ -1956,6 +1956,12 @@ export const DEFAULT_JSON_SETTINGS: Setting[] = [
     "category": "Operasional"
   },
   {
+    "key": "USE_FIRESTORE_DATABASE",
+    "value": false,
+    "description": "Aktifkan sinkronisasi Cloud Firestore (Atur FALSE untuk menghemat kuota dan menggunakan database Express bawaan)",
+    "category": "Integrasi"
+  },
+  {
     "key": "AUTO_SYNC_GOOGLE_SHEETS",
     "value": true,
     "description": "Sinkronisasi Realtime Otomatis ke Google Sheets",

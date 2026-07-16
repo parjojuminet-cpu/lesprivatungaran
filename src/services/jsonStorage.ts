@@ -47,7 +47,6 @@ export function sanitizeErpDatabase(db: Partial<ErpDatabaseJson>): ErpDatabaseJs
     const uname = (u.username || '').toLowerCase().trim();
     if (DUMMY_USERNAMES.has(uname)) return false;
     if (DUMMY_IDS.has(u.id)) return false;
-    if (u.name && (u.name.includes('Budi Santoso') || u.name.includes('Rina Wijaya') || u.name.includes('Siti Rahma'))) return false;
     return true;
   });
 
@@ -69,9 +68,9 @@ export function sanitizeErpDatabase(db: Partial<ErpDatabaseJson>): ErpDatabaseJs
     return u;
   });
 
-  let cleanTutors = (db.tutors || []).filter(t => !DUMMY_IDS.has(t.id) && !t.name?.includes('Budi Santoso') && !t.name?.includes('Rina Wijaya'));
+  let cleanTutors = (db.tutors || []).filter(t => !DUMMY_IDS.has(t.id));
   let cleanStudents = (db.students || [])
-    .filter(s => !DUMMY_IDS.has(s.id) && !s.name?.includes('Ananda Rizky') && !s.name?.includes('Bintang Perkasa') && !s.name?.includes('Citra Kirana'))
+    .filter(s => !DUMMY_IDS.has(s.id))
     .map(s => ({
       ...s,
       totalPackageSessions: s.totalPackageSessions !== undefined ? Number(s.totalPackageSessions) : 10,
