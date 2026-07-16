@@ -135,15 +135,10 @@ export const AttendanceView: React.FC<AttendanceViewProps> = ({
   const activeScheduleId = selectedScheduleId || (availableSchedules.length > 0 ? availableSchedules[0].id : '');
   const activeSch = schedules.find(s => s.id === activeScheduleId);
   const activeStudentId = activeSch?.studentId;
-  const activeDate = isAdmin ? selectedDate : todayStr;
+  const activeDate = selectedDate;
 
   // Check if student has already been attended on selected date (Anti-Duplicate Check on same calendar day)
-  const isAlreadyAttendedOnSelectedDate = attendances.some(a => 
-    activeStudentId && a.studentId === activeStudentId && 
-    a.date === activeDate &&
-    a.status === 'Hadir' &&
-    status === 'Hadir'
-  );
+  const isAlreadyAttendedOnSelectedDate = false;
 
   // Apply Security Watermark (Date, Day, Time, Student, Tutor) to Canvas
   const applyWatermarkToCanvas = (
@@ -397,7 +392,7 @@ export const AttendanceView: React.FC<AttendanceViewProps> = ({
 
     try {
       setIsSubmitting(true);
-      const finalDate = isAdmin ? selectedDate : getLocalDateString();
+      const finalDate = selectedDate;
 
       await saveAttendanceData({
         scheduleId: sch.id,
@@ -702,7 +697,7 @@ export const AttendanceView: React.FC<AttendanceViewProps> = ({
                   <div className="space-y-0.5">
                     <span className="font-extrabold text-indigo-900">Sistem Presensi Fleksibel (Murni Kuota):</span>
                     <p className="text-[11px] text-indigo-800 leading-relaxed">
-                      Tentor bebas menentukan hari apa saja untuk melakukan sesi belajar sesuai kesepakatan riil di lapangan. <strong className="text-indigo-950 underline">Pengaman: Maksimal 1x absen Hadir per murid dalam 1 hari kalender.</strong>
+                      Tentor bebas menentukan hari apa saja untuk melakukan sesi belajar sesuai kesepakatan riil di lapangan. <strong className="text-emerald-950 underline">Sistem presensi murni berbasis kuota (tanpa batasan hari kalender).</strong>
                     </p>
                   </div>
                 </div>
@@ -722,7 +717,7 @@ export const AttendanceView: React.FC<AttendanceViewProps> = ({
                       const remaining = student ? student.remainingSessions : 0;
                       return (
                         <option key={sch.id} value={sch.id}>
-                          Siswa: {student?.name || sch.studentId} ({sch.subject}) • Sisa Kuota: {remaining} [{sch.dayOfWeek} {sch.timeSlot}]
+                          Siswa: {student?.name || sch.studentId} ({sch.subject}) • Sisa Kuota: {remaining} Sesi
                         </option>
                       );
                     })}
@@ -732,50 +727,19 @@ export const AttendanceView: React.FC<AttendanceViewProps> = ({
                 {/* Date Picker */}
                 <div>
                   <label className="block text-slate-700 font-bold mb-1">Tanggal Pertemuan Les</label>
-                  {isAdmin ? (
-                    <>
-                      <input
-                        type="date"
-                        value={selectedDate}
-                        onChange={(e) => setSelectedDate(e.target.value)}
-                        className="w-full border border-slate-200 rounded-xl p-2.5 focus:ring-2 focus:ring-emerald-500 focus:outline-none font-bold text-slate-800 text-xs"
-                        required
-                      />
-                      <p className="text-[10px] text-slate-500 mt-1">
-                        Isi dengan tanggal pelaksanaan les yang sebenarnya (Admin bebas memilih tanggal/melakukan backdate).
-                      </p>
-                    </>
-                  ) : (
-                    <div className="relative">
-                      <input
-                        type="date"
-                        value={todayStr}
-                        disabled
-                        className="w-full border border-slate-200 bg-slate-100 rounded-xl p-2.5 font-bold text-slate-500 text-xs cursor-not-allowed"
-                      />
-                      <div className="absolute right-3 top-2 flex items-center gap-1.5 bg-rose-50 text-rose-700 border border-rose-200 px-2.5 py-1 rounded-lg text-[10px] font-extrabold shadow-3xs">
-                        <Lock className="w-3 h-3 text-rose-500" />
-                        <span>Terkunci ke Hari Ini</span>
-                      </div>
-                      <p className="text-[10px] text-slate-500 mt-1">
-                        Presensi hanya diperbolehkan untuk hari ini untuk mencegah penginputan tanggal palsu (anti-fake attendance).
-                      </p>
-                    </div>
-                  )}
+                  <input
+                    type="date"
+                    value={selectedDate}
+                    onChange={(e) => setSelectedDate(e.target.value)}
+                    className="w-full border border-slate-200 rounded-xl p-2.5 focus:ring-2 focus:ring-emerald-500 focus:outline-none font-bold text-slate-800 text-xs"
+                    required
+                  />
+                  <p className="text-[10px] text-slate-500 mt-1">
+                    Isi dengan tanggal pelaksanaan les yang sebenarnya (bebas memilih tanggal belajar / murni sistem kuota).
+                  </p>
                 </div>
 
-                {/* Warning Banner if Already Attended On Selected Date */}
-                {isAlreadyAttendedOnSelectedDate && (
-                  <div className="bg-amber-50 border border-amber-300 p-3.5 rounded-xl text-xs text-amber-900 space-y-1 my-3 shadow-2xs">
-                    <div className="flex items-center gap-2 font-extrabold text-amber-800">
-                      <AlertTriangle className="w-4 h-4 shrink-0 text-amber-600" />
-                      <span>Murid Ini Sudah Memiliki Absen Hadir pada Tanggal Terpilih ({activeDate})</span>
-                    </div>
-                    <p className="text-[11px] text-amber-700 leading-relaxed">
-                      Sistem mendeteksi adanya laporan presensi 'Hadir' pada tanggal ini. Sistem memblokir pengambilan kuota ganda di hari yang sama demi melindungi sisa kuota paket murid.
-                    </p>
-                  </div>
-                )}
+
 
                 {/* Attendance Status */}
                 <div>

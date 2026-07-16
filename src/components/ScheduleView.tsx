@@ -57,7 +57,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
   const [selectedStudentId, setSelectedStudentId] = useState('');
   const [selectedTutorId, setSelectedTutorId] = useState('');
   const [subject, setSubject] = useState('Matematika');
-  const [dayOfWeek, setDayOfWeek] = useState('Senin');
+  const [dayOfWeek, setDayOfWeek] = useState('Fleksibel');
   const [timeSlot, setTimeSlot] = useState('15:00 - 16:30');
   const [type, setType] = useState<ScheduleType>('Jadwal Tetap');
   const [adminFee, setAdminFee] = useState<number>(5000);
@@ -263,22 +263,6 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-200 text-xs font-medium focus:ring-2 focus:ring-indigo-500 focus:outline-none"
           />
-        </div>
-
-        <div className="flex items-center gap-2 w-full sm:w-auto justify-end text-xs">
-          <span className="text-slate-500 font-bold flex items-center gap-1">
-            <Filter className="w-3.5 h-3.5 text-slate-400" /> Filter Hari:
-          </span>
-          <select
-            value={filterDay}
-            onChange={(e) => setFilterDay(e.target.value)}
-            className="border border-slate-200 rounded-xl px-3 py-2 font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          >
-            <option value="Semua">Semua Hari</option>
-            {daysList.map(d => (
-              <option key={d} value={d}>{d}</option>
-            ))}
-          </select>
         </div>
       </div>
 
@@ -488,16 +472,11 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
                 <div>
                   <label className="block text-slate-700 font-bold mb-1">Hari</label>
                   <select
-                    value={dayOfWeek}
-                    onChange={(e) => {
-                      setDayOfWeek(e.target.value);
-                      if (selectedTutorId) handleCheckClash(selectedTutorId, e.target.value, timeSlot);
-                    }}
-                    className="w-full border border-slate-200 rounded-xl p-2.5 focus:ring-2 focus:ring-indigo-500 focus:outline-none font-medium"
+                    disabled
+                    value="Fleksibel"
+                    className="w-full border border-slate-200 bg-slate-50 rounded-xl p-2.5 text-slate-500 font-semibold cursor-not-allowed"
                   >
-                    {daysList.map(d => (
-                      <option key={d} value={d}>{d}</option>
-                    ))}
+                    <option value="Fleksibel">Fleksibel (Murni Kuota)</option>
                   </select>
                 </div>
 

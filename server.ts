@@ -441,21 +441,7 @@ app.get('/api/attendances', (req, res) => {
 app.post('/api/attendances', (req, res) => {
   const { scheduleId, studentId, tutorId, date } = req.body;
 
-  // Pure Quota-Slot Duplication Guard: maximum 1 'Hadir' attendance per student on any given calendar date
   const targetDate = date || new Date().toISOString().substring(0, 10);
-  const isIncomingHadir = req.body.status === 'Hadir' || !req.body.status;
-  const existing = attendances.find(a => 
-    a.studentId === studentId && 
-    a.date === targetDate &&
-    a.status === 'Hadir' &&
-    isIncomingHadir
-  );
-
-  if (existing) {
-    return res.status(400).json({ 
-      error: `Siswa ini sudah memiliki laporan presensi 'Hadir' pada tanggal ${targetDate}. Sistem memblokir pengambilan kuota ganda di hari yang sama untuk melindungi kuota paket siswa.` 
-    });
-  }
 
   const newAtt = {
     id: `att-${Date.now()}`,

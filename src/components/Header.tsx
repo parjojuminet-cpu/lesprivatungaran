@@ -3,7 +3,7 @@ import { User, UserRole } from '../types';
 import { TabType } from './Sidebar';
 import {
   UserCheck, LogOut, Menu, X, FileSpreadsheet, FileJson,
-  LayoutDashboard, Users, Camera, Wallet, Settings, Calendar, BookOpen
+  LayoutDashboard, Users, Camera, Wallet, Settings, Calendar, BookOpen, RefreshCw
 } from 'lucide-react';
 import { exportDatabaseToJson } from '../services/jsonStorage';
 import { exportDatabaseToExcelXls } from '../services/exportUtils';
@@ -163,6 +163,19 @@ export const Header: React.FC<HeaderProps> = ({
 
           {/* User Avatar & Logout */}
           <div className="flex items-center gap-1.5 sm:gap-2 pl-1.5 sm:pl-2 border-l border-slate-200">
+            <button
+              onClick={() => {
+                if (window.confirm('Apakah Anda yakin ingin menghapus cache sistem?\n\nTindakan ini akan mengosongkan penyimpanan lokal dan mengunduh ulang data terbaru dari server.')) {
+                  localStorage.clear();
+                  window.location.reload();
+                }
+              }}
+              title="Hapus Cache & Sinkron Ulang"
+              className="flex items-center gap-1 text-[11px] sm:text-xs bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-700 px-2 sm:px-2.5 py-1.5 rounded-xl transition-all cursor-pointer font-bold shadow-2xs active:scale-95 shrink-0 mr-1.5"
+            >
+              <RefreshCw className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+              <span className="hidden xs:inline">Hapus Cache</span>
+            </button>
             <div className="text-right hidden md:block">
               <div className="text-xs font-extrabold text-slate-900 leading-tight">{currentUser.name}</div>
               <div className="mt-0.5">{getRoleBadge(currentUser.role)}</div>
