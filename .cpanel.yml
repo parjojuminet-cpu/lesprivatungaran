@@ -1,5 +1,7 @@
 ---
 deployment:
-tasks:
-- export DEPLOYPATH=/home/lesy4698/public_html/git
-- /bin/cp -R * $DEPLOYPATH
+  tasks:
+    - export DEPLOYPATH=/home/lesy4698/app
+    - /bin/cp -R * $DEPLOYPATH
+    - cd $DEPLOYPATH
+    - npm install --production

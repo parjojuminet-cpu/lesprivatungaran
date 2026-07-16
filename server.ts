@@ -17,7 +17,7 @@ const app = express();
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
-const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
+const PORT = process.env.PORT || 3000;
 
 // Default initial mock database from defaultJsonData
 let students: any[] = [...DEFAULT_JSON_STUDENTS];
@@ -886,8 +886,8 @@ async function startServer() {
     });
   }
 
-  app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Server ERP Bimbel Privat running on http://0.0.0.0:${PORT}`);
+  app.listen(PORT, () => {
+    console.log(`Server ERP Bimbel Privat running on port ${PORT}`);
   });
 }
 
