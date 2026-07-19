@@ -154,78 +154,31 @@ export function sanitizeErpDatabase(db: Partial<ErpDatabaseJson>): ErpDatabaseJs
   };
 }
 
-function getLocalArray<T>(key: string, fallback: T[]): T[] {
-  try {
-    const saved = localStorage.getItem(key);
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      if (Array.isArray(parsed)) return parsed;
-    }
-  } catch (e) {
-    console.warn(`Error reading ${key} from localStorage`, e);
-  }
-  return fallback;
-}
-
 export function loadErpJsonDatabase(): ErpDatabaseJson {
-  try {
-    const fullSaved = localStorage.getItem(STORAGE_KEY);
-    if (fullSaved) {
-      const db: ErpDatabaseJson = JSON.parse(fullSaved);
-      if (db && typeof db === 'object') {
-        const sanitized = sanitizeErpDatabase(db);
-        saveErpJsonDatabase(sanitized);
-        return sanitized;
-      }
-    }
-  } catch (e) {
-    console.error('Failed reading full database json:', e);
-  }
-
   const rawDb: ErpDatabaseJson = {
-    users: getLocalArray('erp_local_users', DEFAULT_JSON_USERS),
-    students: getLocalArray('erp_local_students', DEFAULT_JSON_STUDENTS),
-    tutors: getLocalArray('erp_local_tutors', DEFAULT_JSON_TUTORS),
-    parents: getLocalArray('erp_local_parents', DEFAULT_JSON_PARENTS),
-    subjects: getLocalArray('erp_local_subjects', DEFAULT_JSON_SUBJECTS),
-    workingAreas: getLocalArray('erp_local_areas', DEFAULT_JSON_WORKING_AREAS),
-    schedules: getLocalArray('erp_local_schedules', DEFAULT_JSON_SCHEDULES),
-    attendances: getLocalArray('erp_local_attendances', DEFAULT_JSON_ATTENDANCES),
-    invoices: getLocalArray('erp_local_invoices', DEFAULT_JSON_INVOICES),
-    finance: getLocalArray('erp_local_finance', DEFAULT_JSON_FINANCE),
-    salaries: getLocalArray('erp_local_salaries', DEFAULT_JSON_SALARIES),
-    approvals: getLocalArray('erp_local_approvals', DEFAULT_JSON_APPROVALS),
-    modules: getLocalArray('erp_local_modules', DEFAULT_JSON_MODULES),
-    settings: getLocalArray('erp_local_settings', DEFAULT_JSON_SETTINGS),
-    auditLogs: getLocalArray('erp_local_audit_logs', DEFAULT_JSON_AUDIT_LOGS)
+    users: DEFAULT_JSON_USERS,
+    students: DEFAULT_JSON_STUDENTS,
+    tutors: DEFAULT_JSON_TUTORS,
+    parents: DEFAULT_JSON_PARENTS,
+    subjects: DEFAULT_JSON_SUBJECTS,
+    workingAreas: DEFAULT_JSON_WORKING_AREAS,
+    schedules: DEFAULT_JSON_SCHEDULES,
+    attendances: DEFAULT_JSON_ATTENDANCES,
+    invoices: DEFAULT_JSON_INVOICES,
+    finance: DEFAULT_JSON_FINANCE,
+    salaries: DEFAULT_JSON_SALARIES,
+    approvals: DEFAULT_JSON_APPROVALS,
+    modules: DEFAULT_JSON_MODULES,
+    settings: DEFAULT_JSON_SETTINGS,
+    auditLogs: DEFAULT_JSON_AUDIT_LOGS
   };
 
-  const sanitized = sanitizeErpDatabase(rawDb);
-  saveErpJsonDatabase(sanitized);
-  return sanitized;
+  return sanitizeErpDatabase(rawDb);
 }
 
 export function saveErpJsonDatabase(db: ErpDatabaseJson): void {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
-    localStorage.setItem('erp_local_users', JSON.stringify(db.users));
-    localStorage.setItem('erp_local_students', JSON.stringify(db.students));
-    localStorage.setItem('erp_local_tutors', JSON.stringify(db.tutors));
-    localStorage.setItem('erp_local_parents', JSON.stringify(db.parents));
-    localStorage.setItem('erp_local_subjects', JSON.stringify(db.subjects));
-    localStorage.setItem('erp_local_areas', JSON.stringify(db.workingAreas));
-    localStorage.setItem('erp_local_schedules', JSON.stringify(db.schedules));
-    localStorage.setItem('erp_local_attendances', JSON.stringify(db.attendances));
-    localStorage.setItem('erp_local_invoices', JSON.stringify(db.invoices));
-    localStorage.setItem('erp_local_finance', JSON.stringify(db.finance));
-    localStorage.setItem('erp_local_salaries', JSON.stringify(db.salaries));
-    localStorage.setItem('erp_local_approvals', JSON.stringify(db.approvals));
-    localStorage.setItem('erp_local_modules', JSON.stringify(db.modules));
-    localStorage.setItem('erp_local_settings', JSON.stringify(db.settings));
-    localStorage.setItem('erp_local_audit_logs', JSON.stringify(db.auditLogs));
-  } catch (e) {
-    console.error('Failed saving ERP database to localStorage:', e);
-  }
+  // Client-side localStorage persistence completely disabled to prevent split-brain conflicts and data duplicates.
+  // Express Server database server_db.json is the single source of truth.
 }
 
 export function exportDatabaseToJson(): void {

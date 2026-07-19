@@ -20,7 +20,6 @@ interface DashboardViewProps {
   userRole: UserRole;
   currentUserTutorId?: string;
   onNavigate: (tab: any) => void;
-  onPullSheet?: () => void;
 }
 
 export const DashboardView: React.FC<DashboardViewProps> = ({
@@ -35,8 +34,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   finance = [],
   userRole,
   currentUserTutorId,
-  onNavigate,
-  onPullSheet
+  onNavigate
 }) => {
   const [showExtraKuotaModal, setShowExtraKuotaModal] = useState(false);
   const [selectedStudentIdForExtra, setSelectedStudentIdForExtra] = useState('');

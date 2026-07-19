@@ -260,7 +260,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
             <div>
               <div className="text-[11px] font-bold text-slate-200">System Live</div>
-              <div className="text-[10px] text-slate-400">Database Firestore & Sheet</div>
+              <div className="text-[10px] text-slate-400">Database Sistem Terpusat</div>
             </div>
           </div>
           <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>

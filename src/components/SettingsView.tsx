@@ -29,8 +29,7 @@ const DEFAULT_SETTINGS: Setting[] = [
   { key: 'MARGIN_MANAGEMENT_NOMINAL', value: 10000, description: 'Nominal Standar Fee/Potongan Manajemen (Rp per Sesi Pertemuan)', category: 'Keuangan' },
   { key: 'MAX_RESCHEDULE_PER_MONTH', value: 2, description: 'Batas Maksimal Reschedule Gratis Per Bulan', category: 'Operasional' },
   { key: 'MIN_NOTICE_RESCHEDULE_DAYS', value: 1, description: 'Minimal Pemberitahuan Reschedule Sebelum Hari Mengajar (Hari, misal 1 atau 2 hari)', category: 'Operasional' },
-  { key: 'MAX_DEADLINE_RESCHEDULE_BEFORE_TEACHING_DAYS', value: 1, description: 'Batas Maksimal Pengajuan Reschedule Sebelum Hari Mengajar (Hari, Standar: H-1)', category: 'Operasional' },
-  { key: 'AUTO_SYNC_GOOGLE_SHEETS', value: true, description: 'Sinkronisasi Realtime Otomatis ke Google Sheets', category: 'Integrasi' }
+  { key: 'MAX_DEADLINE_RESCHEDULE_BEFORE_TEACHING_DAYS', value: 1, description: 'Batas Maksimal Pengajuan Reschedule Sebelum Hari Mengajar (Hari, Standar: H-1)', category: 'Operasional' }
 ];
 
 export const SettingsView: React.FC<SettingsViewProps> = ({
@@ -42,33 +41,17 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   onRefresh
 }) => {
   const [settingsList, setSettingsList] = useState<Setting[]>(() => {
-    if (settings && settings.length > 0) return settings;
-    const saved = localStorage.getItem('erp_local_settings');
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-      } catch {}
-    }
-    return DEFAULT_SETTINGS;
+    let list = DEFAULT_SETTINGS;
+    if (settings && settings.length > 0) list = settings;
+    return list.filter(s => s.key !== 'AUTO_SYNC_GOOGLE_SHEETS');
   });
 
   useEffect(() => {
+    let list = DEFAULT_SETTINGS;
     if (settings && settings.length > 0) {
-      setSettingsList(settings);
-    } else {
-      const saved = localStorage.getItem('erp_local_settings');
-      if (saved) {
-        try {
-          const parsed = JSON.parse(saved);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            setSettingsList(parsed);
-            return;
-          }
-        } catch {}
-      }
-      setSettingsList(DEFAULT_SETTINGS);
+      list = settings;
     }
+    setSettingsList(list.filter(s => s.key !== 'AUTO_SYNC_GOOGLE_SHEETS'));
   }, [settings]);
 
   const [isSaving, setIsSaving] = useState(false);
@@ -97,7 +80,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         ...db,
         settings: settingsList
       }));
-      localStorage.setItem('erp_local_settings', JSON.stringify(settingsList));
       alert('Pengaturan sistem ERP Bimbel berhasil disimpan!');
     } catch (err) {
       console.error('Failed saving settings:', err);
@@ -335,7 +317,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           {settingsList.map((st) => {
             const isNominalMargin = st.key.includes('MARGIN');
             const isRescheduleDays = st.key.includes('RESCHEDULE');
-            const isGoogleSheets = st.key.includes('GOOGLE_SHEETS');
 
             return (
               <div key={st.key} className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-2 flex flex-col justify-between">
@@ -345,8 +326,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                       {st.key === 'MARGIN_MANAGEMENT_NOMINAL' ? 'Margin Manajemen Standar (Nominal)' :
                        st.key === 'MIN_NOTICE_RESCHEDULE_DAYS' ? 'Minimal Pemberitahuan Reschedule (Hari)' :
                        st.key === 'MAX_DEADLINE_RESCHEDULE_BEFORE_TEACHING_DAYS' ? 'Batas Maksimal Reschedule Sebelum Mengajar' :
-                       st.key === 'MAX_RESCHEDULE_PER_MONTH' ? 'Batas Maksimal Reschedule Gratis / Bulan' :
-                       st.key === 'AUTO_SYNC_GOOGLE_SHEETS' ? 'Auto Sync Google Sheets' : st.key}
+                       st.key === 'MAX_RESCHEDULE_PER_MONTH' ? 'Batas Maksimal Reschedule Gratis / Bulan' : st.key}
                     </span>
                     <span className="text-[10px] bg-indigo-100 text-indigo-800 font-bold px-2 py-0.5 rounded-md">
                       {st.category}
@@ -370,12 +350,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   {isRescheduleDays && st.key.includes('MAX_DEADLINE') && (
                     <div className="bg-amber-50 text-amber-900 p-2.5 rounded-lg border border-amber-200 text-[11px] mt-2">
                       ⏰ Batas maksimal paling lambat pengajuan reschedule adalah <strong>1 hari sebelum hari mengajar (H-1)</strong>.
-                    </div>
-                  )}
-
-                  {isGoogleSheets && (
-                    <div className="bg-purple-50 text-purple-900 p-2.5 rounded-lg border border-purple-200 text-[11px] mt-2">
-                      ⚡ <strong>Fungsi Auto Sync:</strong> Saat diaktifkan (true), setiap perubahan data di ERP (Siswa, Presensi, SPP, Gaji) akan langsung tersinkronkan otomatis ke Google Spreadsheet Anda secara real-time.
                     </div>
                   )}
                 </div>

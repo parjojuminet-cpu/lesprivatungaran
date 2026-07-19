@@ -1861,74 +1861,7 @@ export const DEFAULT_JSON_SALARIES: TutorSalary[] = [];
 
 export const DEFAULT_JSON_APPROVALS: Approval[] = [];
 
-export const DEFAULT_JSON_MODULES: Module[] = [
-  {
-    "id": "mod_001",
-    "title": "Buku Siswa Matematika Kelas 1 SD (Kurikulum Merdeka)",
-    "subject": "Matematika",
-    "grade": "SD",
-    "driveFileUrl": "https://buku.kemdikbud.go.id/katalog/matematika-untuk-sd-kelas-i",
-    "uploadedBy": "Manajemen Bimbel",
-    "uploadedAt": "2026-07-08",
-    "description": "Buku panduan materi pelajaran Matematika Kurikulum Merdeka untuk tingkat SD Kelas 1. Buka website resmi untuk membaca interaktif online atau download PDF resmi.",
-    "fileType": "WEBSITE"
-  },
-  {
-    "id": "mod_002",
-    "title": "Buku Siswa Matematika Kelas 4 SD (Kurikulum Merdeka)",
-    "subject": "Matematika",
-    "grade": "SD",
-    "driveFileUrl": "https://buku.kemdikbud.go.id/katalog/matematika-untuk-sd-kelas-iv-vol-1",
-    "uploadedBy": "Manajemen Bimbel",
-    "uploadedAt": "2026-07-08",
-    "description": "Buku pegangan siswa untuk pelajaran Matematika tingkat SD Kelas 4 Kurikulum Merdeka. Buka website resmi untuk membaca atau download PDF materi.",
-    "fileType": "WEBSITE"
-  },
-  {
-    "id": "mod_003",
-    "title": "Buku Siswa Ilmu Pengetahuan Alam (IPA) Kelas 7 SMP",
-    "subject": "IPA",
-    "grade": "SMP",
-    "driveFileUrl": "https://buku.kemdikbud.go.id/katalog/ilmu-pengetahuan-alam-untuk-smp-kelas-vii",
-    "uploadedBy": "Manajemen Bimbel",
-    "uploadedAt": "2026-07-08",
-    "description": "Materi terpadu ilmu pengetahuan alam mencakup fisika dasar, biologi, zat, energi, dan bumi untuk SMP Kelas 7. Buka website untuk baca online & download.",
-    "fileType": "WEBSITE"
-  },
-  {
-    "id": "mod_004",
-    "title": "Buku Siswa Matematika Kelas 10 SMA",
-    "subject": "Matematika",
-    "grade": "SMA",
-    "driveFileUrl": "https://buku.kemdikbud.go.id/katalog/matematika-untuk-sma-kelas-x",
-    "uploadedBy": "Manajemen Bimbel",
-    "uploadedAt": "2026-07-08",
-    "description": "Buku materi Matematika wajib tingkat SMA/MA Kelas 10 Kurikulum Merdeka. Klik untuk membuka portal resmi, membaca, atau mendownload PDF.",
-    "fileType": "WEBSITE"
-  },
-  {
-    "id": "mod_005",
-    "title": "Buku Lengkap Iqro Belajar Membaca Al-Qur'an (Jilid 1-6)",
-    "subject": "Ngaji Iqro",
-    "grade": "TK Besar",
-    "driveFileUrl": "https://archive.org/details/buku-iqro-1-6-pdf",
-    "uploadedBy": "Manajemen Bimbel",
-    "uploadedAt": "2026-07-08",
-    "description": "Modul panduan belajar membaca huruf hijaiyah & Al-Qur'an jilid 1-6. Buka website interaktif untuk membaca seperti buku fisik (flipbook) atau download PDF.",
-    "fileType": "WEBSITE"
-  },
-  {
-    "id": "mod_006",
-    "title": "Buku Guru Bahasa Inggris (My Next Words) Kelas 1 SD",
-    "subject": "English",
-    "grade": "SD",
-    "driveFileUrl": "https://buku.kemdikbud.go.id/katalog/my-next-words-grade-1-teachers-book",
-    "uploadedBy": "Manajemen Bimbel",
-    "uploadedAt": "2026-07-08",
-    "description": "Panduan interaktif dan materi pengajaran bahasa Inggris dasar bagi anak tingkat SD Kelas 1. Silakan buka website untuk melihat silabus atau unduh PDF.",
-    "fileType": "WEBSITE"
-  }
-];
+export const DEFAULT_JSON_MODULES: Module[] = [];
 
 export const DEFAULT_JSON_SETTINGS: Setting[] = [
   {
@@ -1954,12 +1887,6 @@ export const DEFAULT_JSON_SETTINGS: Setting[] = [
     "value": 1,
     "description": "Batas Maksimal Pengajuan Reschedule Sebelum Hari Mengajar (Hari, Standar: H-1)",
     "category": "Operasional"
-  },
-  {
-    "key": "AUTO_SYNC_GOOGLE_SHEETS",
-    "value": true,
-    "description": "Sinkronisasi Realtime Otomatis ke Google Sheets",
-    "category": "Integrasi"
   }
 ];
 

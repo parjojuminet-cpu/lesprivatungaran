@@ -17,13 +17,6 @@ export const AuditLogView: React.FC<AuditLogViewProps> = ({ auditLogs = [] }) =>
   const [search, setSearch] = useState('');
   const [logs, setLogs] = useState<AuditLog[]>(() => {
     if (auditLogs && auditLogs.length > 0) return auditLogs;
-    const saved = localStorage.getItem('erp_local_audit_logs');
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-      } catch {}
-    }
     return DEFAULT_AUDIT_LOGS;
   });
 
@@ -31,16 +24,6 @@ export const AuditLogView: React.FC<AuditLogViewProps> = ({ auditLogs = [] }) =>
     if (auditLogs && auditLogs.length > 0) {
       setLogs(auditLogs);
     } else {
-      const saved = localStorage.getItem('erp_local_audit_logs');
-      if (saved) {
-        try {
-          const parsed = JSON.parse(saved);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            setLogs(parsed);
-            return;
-          }
-        } catch {}
-      }
       setLogs(DEFAULT_AUDIT_LOGS);
     }
   }, [auditLogs]);

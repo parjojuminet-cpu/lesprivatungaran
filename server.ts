@@ -1,6 +1,7 @@
 import express from 'express';
 import path from 'path';
 import fs from 'fs';
+import mysql from 'mysql2/promise';
 import {
   DEFAULT_JSON_USERS,
   DEFAULT_JSON_TUTORS,
@@ -31,20 +32,40 @@ let finance: any[] = [];
 let salaries: any[] = [];
 let approvals: any[] = [];
 let modules: any[] = [];
-
-let settings = [...DEFAULT_JSON_SETTINGS];
-
-let users = [...DEFAULT_JSON_USERS];
-
+let settings: any[] = [...DEFAULT_JSON_SETTINGS];
+let users: any[] = [...DEFAULT_JSON_USERS];
 let auditLogs: any[] = [];
 
-let sheetSyncStatus = {
-  syncStatus: 'NotConnected',
-  spreadsheetId: '',
-  spreadsheetUrl: '',
-  lastSyncTime: null,
-  errorMessage: null
-};
+// MySQL Connection Pool Management
+let pool: mysql.Pool | null = null;
+
+function getMySQLPool(): mysql.Pool | null {
+  if (pool) return pool;
+
+  const host = process.env.DB_HOST;
+  const user = process.env.DB_USER;
+  const password = process.env.DB_PASSWORD;
+  const database = process.env.DB_NAME;
+  const port = process.env.DB_PORT ? parseInt(process.env.DB_PORT) : 3306;
+
+  if (!host || !user || !database) {
+    return null;
+  }
+
+  pool = mysql.createPool({
+    host,
+    user,
+    password,
+    database,
+    port,
+    waitForConnections: true,
+    connectionLimit: 10,
+    queueLimit: 0,
+    connectTimeout: 10000
+  });
+
+  return pool;
+}
 
 const DB_FILE_PATH = path.join(process.cwd(), 'server_db.json');
 
@@ -77,6 +98,101 @@ function loadServerDb() {
   }
 }
 
+async function saveServerDbMySQL() {
+  const p = getMySQLPool();
+  if (!p) return;
+
+  try {
+    const keys = [
+      { k: 'students', v: students },
+      { k: 'tutors', v: tutors },
+      { k: 'parents', v: parents },
+      { k: 'subjects', v: subjects },
+      { k: 'workingAreas', v: workingAreas },
+      { k: 'schedules', v: schedules },
+      { k: 'attendances', v: attendances },
+      { k: 'invoices', v: invoices },
+      { k: 'finance', v: finance },
+      { k: 'salaries', v: salaries },
+      { k: 'approvals', v: approvals },
+      { k: 'modules', v: modules },
+      { k: 'settings', v: settings },
+      { k: 'users', v: users },
+      { k: 'auditLogs', v: auditLogs }
+    ];
+
+    for (const item of keys) {
+      await p.query(
+        'INSERT INTO erp_store (`key`, `value`) VALUES (?, ?) ON DUPLICATE KEY UPDATE `value` = VALUES(`value`)',
+        [item.k, JSON.stringify(item.v)]
+      );
+    }
+    console.log('Successfully saved and synchronized data to MySQL (erp_store)');
+  } catch (err) {
+    console.error('Failed to save data to MySQL:', err);
+  }
+}
+
+async function initAndLoadDatabase() {
+  const p = getMySQLPool();
+  if (!p) {
+    console.log('No MySQL configuration detected. Using local JSON file (server_db.json).');
+    loadServerDb();
+    return;
+  }
+
+  try {
+    // Ensure erp_store table exists
+    await p.query(`
+      CREATE TABLE IF NOT EXISTS erp_store (
+        \`key\` VARCHAR(50) PRIMARY KEY,
+        \`value\` LONGTEXT NOT NULL,
+        \`updated_at\` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+
+    // Fetch existing entries from the table
+    const [rows]: any = await p.query('SELECT `key`, `value` FROM erp_store');
+
+    if (rows.length === 0) {
+      console.log('MySQL erp_store table is empty. Auto-seeding with current local data from server_db.json...');
+      loadServerDb(); // load from server_db.json
+      await saveServerDbMySQL(); // seed it to MySQL
+      console.log('Seeding MySQL from server_db.json finished successfully!');
+    } else {
+      console.log('MySQL erp_store table has data. Loading database from MySQL...');
+      const dbMap = new Map<string, any>();
+      for (const row of rows) {
+        try {
+          dbMap.set(row.key, JSON.parse(row.value));
+        } catch (e) {
+          console.warn(`Failed to parse row for key ${row.key}:`, e);
+        }
+      }
+
+      if (dbMap.has('students')) students = dbMap.get('students');
+      if (dbMap.has('tutors')) tutors = dbMap.get('tutors');
+      if (dbMap.has('parents')) parents = dbMap.get('parents');
+      if (dbMap.has('subjects')) subjects = dbMap.get('subjects');
+      if (dbMap.has('workingAreas')) workingAreas = dbMap.get('workingAreas');
+      if (dbMap.has('schedules')) schedules = dbMap.get('schedules');
+      if (dbMap.has('attendances')) attendances = dbMap.get('attendances');
+      if (dbMap.has('invoices')) invoices = dbMap.get('invoices');
+      if (dbMap.has('finance')) finance = dbMap.get('finance');
+      if (dbMap.has('salaries')) salaries = dbMap.get('salaries');
+      if (dbMap.has('approvals')) approvals = dbMap.get('approvals');
+      if (dbMap.has('modules')) modules = dbMap.get('modules');
+      if (dbMap.has('settings')) settings = dbMap.get('settings');
+      if (dbMap.has('users')) users = dbMap.get('users');
+      if (dbMap.has('auditLogs')) auditLogs = dbMap.get('auditLogs');
+      console.log('Successfully loaded all ERP data from MySQL!');
+    }
+  } catch (err) {
+    console.error('Failed to initialize or load from MySQL, falling back to local server_db.json:', err);
+    loadServerDb();
+  }
+}
+
 function saveServerDb() {
   try {
     const data = {
@@ -101,6 +217,11 @@ function saveServerDb() {
   } catch (err) {
     console.warn('Failed to save database to server_db.json:', err);
   }
+
+  // Dual-write: update MySQL in the background (fire-and-forget)
+  saveServerDbMySQL().catch(err => {
+    console.error('Background MySQL save failed:', err);
+  });
 }
 
 // Load DB immediately on server startup
@@ -859,19 +980,6 @@ app.put('/api/settings', (req, res) => {
 
 app.get('/api/audit-logs', (req, res) => res.json(auditLogs));
 
-app.get('/api/sheets/status', (req, res) => {
-  res.json(sheetSyncStatus);
-});
-
-app.post('/api/sheets/sync', (req, res) => {
-  sheetSyncStatus.lastSyncTime = new Date().toISOString();
-  sheetSyncStatus.syncStatus = 'Synced';
-  res.json({
-    success: true,
-    sync: sheetSyncStatus
-  });
-});
-
 app.post('/api/clear-all-activities-absensi-keuangan', (req, res) => {
   schedules = [];
   attendances = [];
@@ -909,48 +1017,18 @@ app.post('/api/clear-all-data', (req, res) => {
     { key: 'MARGIN_MANAGEMENT_NOMINAL', value: 10000, description: 'Nominal Standar Fee/Potongan Manajemen (Rp per Sesi Pertemuan)', category: 'Keuangan' },
     { key: 'MAX_RESCHEDULE_PER_MONTH', value: 2, description: 'Batas Maksimal Reschedule Gratis Per Bulan', category: 'Operasional' },
     { key: 'MIN_NOTICE_RESCHEDULE_DAYS', value: 1, description: 'Minimal Pemberitahuan Reschedule Sebelum Hari Mengajar (Hari, misal 1 atau 2 hari)', category: 'Operasional' },
-    { key: 'MAX_DEADLINE_RESCHEDULE_BEFORE_TEACHING_DAYS', value: 1, description: 'Batas Maksimal Pengajuan Reschedule Sebelum Hari Mengajar (Hari, Standar: H-1)', category: 'Operasional' },
-    { key: 'AUTO_SYNC_GOOGLE_SHEETS', value: true, description: 'Sinkronisasi Realtime Otomatis ke Google Sheets', category: 'Integrasi' }
+    { key: 'MAX_DEADLINE_RESCHEDULE_BEFORE_TEACHING_DAYS', value: 1, description: 'Batas Maksimal Pengajuan Reschedule Sebelum Hari Mengajar (Hari, Standar: H-1)', category: 'Operasional' }
   ];
   auditLogs = [];
   saveServerDb();
   res.json({ success: true, message: 'Semua data ERP telah dikosongkan.' });
 });
 
-app.post('/api/sheets/import', (req, res) => {
-  const {
-    students: newStudents, tutors: newTutors, schedules: newSchedules,
-    attendances: newAttendances, invoices: newInvoices, finance: newFinance,
-    salaries: newSalaries, approvals: newApprovals, modules: newModules,
-    parents: newParents, subjects: newSubjects, workingAreas: newAreas
-  } = req.body;
-
-  if (Array.isArray(newStudents)) students = newStudents;
-  if (Array.isArray(newTutors)) tutors = newTutors;
-  if (Array.isArray(newSchedules)) schedules = newSchedules;
-  if (Array.isArray(newAttendances)) attendances = newAttendances;
-  if (Array.isArray(newInvoices)) invoices = newInvoices;
-  if (Array.isArray(newFinance)) finance = newFinance;
-  if (Array.isArray(newSalaries)) salaries = newSalaries;
-  if (Array.isArray(newApprovals)) approvals = newApprovals;
-  if (Array.isArray(newModules)) modules = newModules;
-  if (Array.isArray(newParents)) parents = newParents;
-  if (Array.isArray(newSubjects)) subjects = newSubjects;
-  if (Array.isArray(newAreas)) workingAreas = newAreas;
-
-  sheetSyncStatus.lastSyncTime = new Date().toISOString();
-  sheetSyncStatus.syncStatus = 'Synced';
-
-  saveServerDb();
-  res.json({
-    success: true,
-    message: 'Data berhasil diimpor dari Google Sheets ke database ERP',
-    sync: sheetSyncStatus
-  });
-});
-
 // START SERVER WITH VITE MIDDLEWARE
 async function startServer() {
+  // Initialize and load MySQL database if configured; falls back to server_db.json
+  await initAndLoadDatabase();
+
   if (process.env.NODE_ENV !== 'production') {
     const { createServer: createViteServer } = await import('vite');
     const vite = await createViteServer({

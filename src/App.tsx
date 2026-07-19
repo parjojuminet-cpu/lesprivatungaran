@@ -17,8 +17,6 @@ import { ReportsView } from './components/ReportsView';
 import { SettingsView } from './components/SettingsView';
 import { JantungView } from './components/JantungView';
 import { LoginView } from './components/LoginView';
-import { getAccessToken, googleSignIn } from './services/googleAuth';
-import { pullErpDataFromSheet, syncErpDataToSheet } from './services/googleSheets';
 import {
   loadErpJsonDatabase,
   saveErpJsonDatabase,
@@ -48,7 +46,6 @@ export default function App() {
   const [settings, setSettings] = useState<Setting[]>(initialDb.settings);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>(initialDb.auditLogs);
   const [stats, setStats] = useState<DashboardStats | null>(null);
-  const [syncStatus, setSyncStatus] = useState<any>(null);
 
   // Dynamic recalculation of stats whenever data updates
   useEffect(() => {
@@ -167,7 +164,6 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<TabType>('dashboard');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   // Helper to safely fetch JSON from backend
   const safeFetch = async (url: string, fallback: any = []) => {
@@ -197,54 +193,6 @@ export default function App() {
         if (serverDb && serverDb.students) {
           let sanitized = sanitizeErpDatabase(serverDb);
 
-          // SAFE MERGING MECHANISM: Prevent overwriting existing client LocalStorage transaction data
-          // if the server is in a fresh/uninitialized default state (which has empty transaction arrays)
-          const mergeArrayById = <T extends { id: string }>(localArr: T[], serverArr: T[]): T[] => {
-            const map = new Map<string, T>();
-            (localArr || []).forEach(item => {
-              if (item && item.id) map.set(item.id, item);
-            });
-            (serverArr || []).forEach(item => {
-              if (item && item.id) map.set(item.id, item);
-            });
-            return Array.from(map.values());
-          };
-
-          const hasLocalData = (currentDb.attendances && currentDb.attendances.length > 0) ||
-                               (currentDb.invoices && currentDb.invoices.length > 0) ||
-                               (currentDb.finance && currentDb.finance.length > 0);
-
-          const serverIsEmpty = (!sanitized.attendances || sanitized.attendances.length === 0) &&
-                                (!sanitized.invoices || sanitized.invoices.length === 0) &&
-                                (!sanitized.finance || sanitized.finance.length === 0);
-
-          if (hasLocalData && serverIsEmpty) {
-            console.log('Server returned default/empty transactional data, restoring from client LocalStorage...');
-            sanitized = {
-              ...sanitized,
-              students: mergeArrayById(currentDb.students || [], sanitized.students || []),
-              tutors: mergeArrayById(currentDb.tutors || [], sanitized.tutors || []),
-              parents: mergeArrayById(currentDb.parents || [], sanitized.parents || []),
-              schedules: mergeArrayById(currentDb.schedules || [], sanitized.schedules || []),
-              attendances: currentDb.attendances || [],
-              invoices: currentDb.invoices || [],
-              finance: currentDb.finance || [],
-              salaries: currentDb.salaries || [],
-              approvals: currentDb.approvals || [],
-              auditLogs: mergeArrayById(currentDb.auditLogs || [], sanitized.auditLogs || []),
-              users: mergeArrayById(currentDb.users || [], sanitized.users || [])
-            };
-
-            // Upload the merged database back to the server to synchronize it
-            fetch('/api/db', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(sanitized)
-            }).then(res => {
-              if (res.ok) console.log('Successfully synchronized restored database to Express Server');
-            }).catch(e => console.warn('Error syncing restored database to server:', e));
-          }
-
           if (sanitized.students) setStudents(sanitized.students);
           if (sanitized.tutors) setTutors(sanitized.tutors);
           if (sanitized.parents) setParents(sanitized.parents);
@@ -264,12 +212,8 @@ export default function App() {
           
           // Fetch additional stats in background
           try {
-            const [resStats, resSheets] = await Promise.all([
-              safeFetch('/api/dashboard/stats', null),
-              safeFetch('/api/sheets/status', null)
-            ]);
+            const resStats = await safeFetch('/api/dashboard/stats', null);
             if (resStats) setStats(resStats);
-            if (resSheets) setSyncStatus(resSheets);
           } catch (err) {
             console.warn('Backend API background sync notice:', err);
           } finally {
@@ -303,12 +247,8 @@ export default function App() {
 
     // Fetch stats
     try {
-      const [resStats, resSheets] = await Promise.all([
-        safeFetch('/api/dashboard/stats', null),
-        safeFetch('/api/sheets/status', null)
-      ]);
+      const resStats = await safeFetch('/api/dashboard/stats', null);
       if (resStats) setStats(resStats);
-      if (resSheets) setSyncStatus(resSheets);
     } catch (err) {
       console.warn('Stats fetch failure on fallback:', err);
     } finally {
@@ -361,7 +301,7 @@ export default function App() {
       setCurrentUser(found);
       localStorage.setItem('erp_session_user', JSON.stringify(found));
       // Auto adjust tab if current tab is forbidden for role
-      if (found.role === 'TENTOR' && ['master', 'finance', 'sheets', 'audit', 'settings'].includes(activeTab)) {
+      if (found.role === 'TENTOR' && ['master', 'finance', 'audit', 'settings'].includes(activeTab)) {
         setActiveTab('attendance');
       }
     }
@@ -378,154 +318,9 @@ export default function App() {
     }
   };
 
-  const handlePullSheet = async () => {
-    let token = getAccessToken();
-    if (!token) {
-      try {
-        const authResult = await googleSignIn();
-        if (authResult?.accessToken) {
-          token = authResult.accessToken;
-        } else {
-          return;
-        }
-      } catch (err: any) {
-        alert(`Gagal login Google Workspace: ${err.message || 'Error login'}`);
-        return;
-      }
-    }
-
-    let spreadsheetId = localStorage.getItem('erp_spreadsheet_id') || syncStatus?.spreadsheetId;
-    if (!spreadsheetId) {
-      const input = prompt('Masukkan Spreadsheet ID atau URL Google Spreadsheet Anda:');
-      if (input) {
-        let trimmed = input.trim();
-        const match = trimmed.match(/\/d\/([a-zA-Z0-9-_]+)/);
-        if (match) trimmed = match[1];
-        spreadsheetId = trimmed;
-        localStorage.setItem('erp_spreadsheet_id', trimmed);
-      } else {
-        setActiveTab('sheets');
-        return;
-      }
-    }
-
-    try {
-      setIsLoading(true);
-      const pulled = await pullErpDataFromSheet(token, spreadsheetId);
-      
-      // Save pulled database directly to local storage
-      const sanitized = sanitizeErpDatabase(pulled);
-      saveErpJsonDatabase(sanitized);
-
-      await fetch('/api/sheets/import', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(pulled)
-      });
-      alert('✅ Data berhasil ditarik & disinkronkan dari Google Sheets!');
-      await loadAllData();
-    } catch (err: any) {
-      if (err.message?.includes('403') || err.message?.includes('401')) {
-        localStorage.removeItem('google_access_token');
-      }
-      alert(`⚠️ Gagal menarik data dari Google Sheets: ${err.message || 'Error'}`);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handlePushSheet = async () => {
-    let token = getAccessToken();
-    if (!token) {
-      try {
-        const authResult = await googleSignIn();
-        if (authResult?.accessToken) {
-          token = authResult.accessToken;
-        } else {
-          return;
-        }
-      } catch (err: any) {
-        alert(`Gagal login Google Workspace: ${err.message || 'Error login'}`);
-        return;
-      }
-    }
-
-    let spreadsheetId = localStorage.getItem('erp_spreadsheet_id') || syncStatus?.spreadsheetId;
-    if (!spreadsheetId) {
-      const input = prompt('Masukkan Spreadsheet ID atau URL Google Spreadsheet Anda:');
-      if (input) {
-        let trimmed = input.trim();
-        const match = trimmed.match(/\/d\/([a-zA-Z0-9-_]+)/);
-        if (match) trimmed = match[1];
-        spreadsheetId = trimmed;
-        localStorage.setItem('erp_spreadsheet_id', trimmed);
-      } else {
-        setActiveTab('sheets');
-        return;
-      }
-    }
-
-    try {
-      setIsLoading(true);
-      await syncErpDataToSheet(token, spreadsheetId, {
-        students,
-        tutors,
-        schedules,
-        attendances,
-        invoices,
-        finances: finance,
-        tutorSalaries: salaries,
-        approvals,
-        auditLogs,
-        modules
-      });
-      alert('✅ Seluruh data ERP berhasil dikirim & disimpan ke Google Sheets!');
-    } catch (err: any) {
-      alert(`⚠️ Gagal mengirim data ke Google Sheets: ${err.message || 'Error'}`);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   const handleLogout = async () => {
-    const token = getAccessToken();
-    const spreadsheetId = localStorage.getItem('erp_spreadsheet_id') || syncStatus?.spreadsheetId;
-
-    if (token && spreadsheetId) {
-      setIsLoggingOut(true);
-      try {
-        await syncErpDataToSheet(token, spreadsheetId, {
-          students,
-          tutors,
-          schedules,
-          attendances,
-          invoices,
-          finances: finance,
-          tutorSalaries: salaries,
-          approvals,
-          auditLogs,
-          modules
-        });
-      } catch (err) {
-        console.error('Auto-push on logout error:', err);
-      } finally {
-        setIsLoggingOut(false);
-      }
-    }
-
     localStorage.removeItem('erp_session_user');
     setIsLoggedIn(false);
-  };
-
-  const handleManualSync = async () => {
-    try {
-      const res = await fetch('/api/sheets/sync', { method: 'POST' });
-      const data = await res.json();
-      setSyncStatus(data.sync);
-      alert('Google Sheets disinkronkan!');
-    } catch (err) {
-      alert('Gagal menyinkronkan Google Sheets');
-    }
   };
 
   const pendingApprovalsCount = approvals.filter(a => a.status === 'Pending').length;
@@ -547,30 +342,12 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-slate-100 flex flex-col font-sans text-slate-800 relative">
-      {/* Auto-push on logout overlay */}
-      {isLoggingOut && (
-        <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-50 flex items-center justify-center text-white">
-          <div className="text-center space-y-4 max-w-sm p-6 bg-slate-800 rounded-2xl border border-slate-700 shadow-2xl">
-            <div className="w-12 h-12 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
-            <div>
-              <p className="font-extrabold text-base text-emerald-400">Mengamankan Data ke Google Sheets...</p>
-              <p className="text-xs text-slate-300 mt-1">Seluruh data ERP otomatis disimpan sebelum Anda keluar.</p>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Header */}
       <Header
         currentUser={currentUser}
         users={users}
         onSwitchUser={handleSwitchUser}
-        syncStatus={syncStatus}
-        onManualSync={handleManualSync}
         onLogout={handleLogout}
-        onPullSheet={handlePullSheet}
-        onPushSheet={handlePushSheet}
-        onOpenSheetsTab={() => setActiveTab('sheets')}
         isMobileMenuOpen={isMobileMenuOpen}
         onToggleMobileMenu={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
         activeTab={activeTab}
@@ -604,7 +381,6 @@ export default function App() {
               userRole={currentUser.role}
               currentUserTutorId={currentUser.tutorId}
               onNavigate={(tab) => setActiveTab(tab)}
-              onPullSheet={handlePullSheet}
             />
           )}
 

@@ -12,12 +12,7 @@ interface HeaderProps {
   currentUser: User;
   users: User[];
   onSwitchUser: (username: string) => void;
-  syncStatus: any;
-  onManualSync: () => void;
   onLogout: () => void;
-  onPullSheet?: () => void;
-  onPushSheet?: () => void;
-  onOpenSheetsTab?: () => void;
   isMobileMenuOpen?: boolean;
   onToggleMobileMenu?: () => void;
   activeTab?: TabType;

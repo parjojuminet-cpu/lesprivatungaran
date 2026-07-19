@@ -1,4 +1,4 @@
-import { ErpDatabaseJson, loadErpJsonDatabase, saveErpJsonDatabase } from './jsonStorage';
+import { ErpDatabaseJson, loadErpJsonDatabase, sanitizeErpDatabase } from './jsonStorage';
 import {
   Student, Tutor, Parent, Subject, WorkingArea, Schedule,
   Attendance, Invoice, Finance, TutorSalary, Module, Approval,
@@ -7,20 +7,37 @@ import {
 
 // Helper to update full database state locally
 export async function persistDatabaseUpdate(updater: (db: ErpDatabaseJson) => ErpDatabaseJson): Promise<ErpDatabaseJson> {
-  const currentDb = loadErpJsonDatabase();
-  const nextDb = updater(currentDb);
-  saveErpJsonDatabase(nextDb);
-  
-  // Dual-write backup to Express server
-  fetch('/api/db', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(nextDb)
-  }).catch(err => {
-    console.warn('Background Express server save status:', err);
-  });
-  
-  return nextDb;
+  try {
+    // 1. Fetch the latest state of the database from the Express server as the absolute source of truth
+    const response = await fetch('/api/db');
+    if (response.ok) {
+      const serverDb = await response.json();
+      const sanitized = sanitizeErpDatabase(serverDb);
+
+      // 2. Apply the client's updater on the fresh, up-to-date server database
+      const nextDb = updater(sanitized);
+      const nextSanitized = sanitizeErpDatabase(nextDb);
+
+      // 3. Write the updated database back to the Express server
+      const saveResponse = await fetch('/api/db', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(nextSanitized)
+      });
+
+      if (saveResponse.ok) {
+        console.log('Successfully saved and synchronized updated database to Express server');
+      }
+      return nextSanitized;
+    }
+  } catch (err) {
+    console.error('Failed to update server database via persistDatabaseUpdate, retrying with default:', err);
+  }
+
+  // Fallback if server is totally unreachable
+  const offlineDb = loadErpJsonDatabase();
+  const nextDb = updater(offlineDb);
+  return sanitizeErpDatabase(nextDb);
 }
 
 // Student CRUD
